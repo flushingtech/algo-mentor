@@ -52,6 +52,22 @@
         button:hover {
             background-color: #0056b3;
         }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head>
 <body>
@@ -62,35 +78,65 @@
         <h2>Collected Data</h2>
         <p><strong>Instructions:</strong> <span id="displayInstructions"></span></p>
         <p><strong>Pseudocode:</strong> <span id="displayPseudocode"></span></p>
+        <p><strong>Partialcode:</strong> <span id="displayPartialcode"></span></p>
     </div>
     <form id="functionForm">
-        <label for="functionCode">Write a function to sum two variables (a and b):</label>
+        <label for="functionCode">Write a function:</label>
         <textarea id="functionCode" name="functionCode" rows="4" required></textarea>
 
         <button type="button" onclick="runFunction()">Run Function</button>
     </form>
-    <p id="result"></p>
+    <p id="result" class="result"></p>
 </div>
 
 <script>
     // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const instructions = urlParams.get('instructions');
+    const instructions = urlParams.get('my-instructions');
     const pseudocode = urlParams.get('pseudocode');
+    const partialCode = urlParams.get('partial-code');
 
     // Display the collected data
     document.getElementById('displayInstructions').textContent = instructions;
     document.getElementById('displayPseudocode').textContent = pseudocode;
+    document.getElementById('displayPartialcode').textContent = partialCode;
 
     // Function to run the user-defined function
     function runFunction() {
         const functionCode = document.getElementById('functionCode').value;
         try {
-            eval(functionCode);
-            const result = sum(3, 4); // Example: Test the function with a = 3 and b = 4
-            document.getElementById('result').textContent = 'The result of sum(3, 4) is: ' + result;
+            // Extract function name and parameters
+            const functionMatch = functionCode.match(/function\s+(\w+)\s*\(([^)]*)\)\s*{([^]*)}/);
+            if (!functionMatch) {
+                throw new Error("Function definition not found or incorrect format.");
+            }
+            const functionName = functionMatch[1];
+            const parameters = functionMatch[2].split(',').map(param => param.trim());
+            const functionBody = functionMatch[3];
+
+            // Create the function globally
+            window[functionName] = new Function(...parameters, functionBody);
+
+            // Example: Test the function with provided parameters
+            const testArgs = parameters.map((_, index) => index + 1); // Create test args: [1, 2, ...]
+            const expectedResult = testArgs.reduce((a, b) => a + b, 0); // For sum function, expected result is the sum of the test args
+            const result = window[functionName](...testArgs);
+
+            const resultElement = document.getElementById('result');
+            if (result === expectedResult) {
+                resultElement.textContent = `The result of ${functionName}(${testArgs.join(', ')}) is: ${result}. Your function is correct!`;
+                resultElement.classList.remove('error');
+                resultElement.classList.add('success');
+            } else {
+                resultElement.textContent = `The result of ${functionName}(${testArgs.join(', ')}) is: ${result}. Your function is incorrect!`;
+                resultElement.classList.remove('success');
+                resultElement.classList.add('error');
+            }
         } catch (error) {
-            document.getElementById('result').textContent = 'Error: ' + error.message;
+            const resultElement = document.getElementById('result');
+            resultElement.textContent = 'Error: ' + error.message;
+            resultElement.classList.remove('success');
+            resultElement.classList.add('error');
         }
     }
 </script>
